@@ -127,15 +127,23 @@ export function PatientRequest() {
                       <button
                         key={group}
                         onClick={() => setBloodGroup(group)}
-                        className="h-12 rounded-lg border-2 transition-all hover:scale-105 active:scale-95"
+                        className={`h-12 rounded-lg border-2 transition-all hover:scale-105 active:scale-95 ${
+                          bloodGroup === group 
+                            ? "text-white" 
+                            : "text-[#374151] dark:text-gray-300 border-[#E5E7EB] dark:border-gray-600"
+                        }`}
                         style={{
                           fontFamily: "'JetBrains Mono', monospace",
                           fontSize: "14px",
                           fontWeight: 600,
-                          borderColor: bloodGroup === group ? bloodGroupColors[group] : "#E5E7EB",
-                          background: bloodGroup === group ? bloodGroupColors[group] : "transparent",
-                          color: bloodGroup === group ? "#fff" : "#374151",
-                          boxShadow: bloodGroup === group ? `0 4px 14px ${bloodGroupColors[group]}40` : "none",
+                          ...(bloodGroup === group ? {
+                            borderColor: bloodGroupColors[group],
+                            background: bloodGroupColors[group],
+                            boxShadow: `0 4px 14px ${bloodGroupColors[group]}40`
+                          } : {
+                            background: "transparent",
+                            boxShadow: "none"
+                          })
                         }}
                       >
                         {group}
