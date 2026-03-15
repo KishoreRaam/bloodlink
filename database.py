@@ -12,7 +12,7 @@ DB_CONFIG = {
     "host": "localhost",
     "port": 3306,
     "user": "root",
-    "password": "",
+    "password": "raam06",
     "database": "blood_management_system",
     "charset": "utf8mb4",
 }
@@ -32,7 +32,7 @@ def init_db_pool() -> None:
         logger.info("Database connection pool initialised successfully.")
     except MySQLError as exc:
         logger.error("Failed to initialise DB pool: %s", exc)
-        raise HTTPException(status_code=503, detail="Database unavailable") from exc
+        raise RuntimeError("Database unavailable") from exc
 
 
 @contextmanager

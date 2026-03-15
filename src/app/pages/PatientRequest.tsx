@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AlertCircle, Minus, Plus, CheckCircle, X, Loader2, Droplets, Users } from "lucide-react";
 import { BloodGroupBadge } from "../components/ui/BloodGroupBadge";
 import { StatusBadge } from "../components/ui/StatusBadge";
+import { getHospitals, createRequest, matchDonors, type Hospital, type MatchedDonor } from "../services/api";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
@@ -12,68 +13,58 @@ const bloodGroupColors: Record<string, string> = {
   "O+": "#C0152A", "O-": "#991B1B",
 };
 
-const HOSPITALS = [
-  "Apollo Hospital, Chennai", "AIIMS Delhi", "Fortis Health, Chennai",
-  "Manipal Hospital, Bangalore", "LifeCare Hospital", "Max Hospital, Delhi",
-];
-
-const MATCHING_DONORS: Record<string, { name: string; initials: string; city: string; color: string }[]> = {
-  "O+": [
-    { name: "Rahul Kumar", initials: "RK", city: "Chennai", color: "#C0152A" },
-    { name: "Mohan Lal", initials: "ML", city: "Chennai", color: "#D97706" },
-    { name: "Priya Singh", initials: "PS", city: "Chennai", color: "#7C3AED" },
-  ],
-  "O-": [
-    { name: "Ananya Iyer", initials: "AI", city: "Chennai", color: "#16A34A" },
-  ],
-  "A+": [
-    { name: "Priya Sharma", initials: "PS", city: "Chennai", color: "#2563EB" },
-    { name: "Sanjay Gupta", initials: "SG", city: "Chennai", color: "#C0152A" },
-  ],
-  "A-": [
-    { name: "Arjun Mehta", initials: "AM", city: "Chennai", color: "#2563EB" },
-  ],
-  "B+": [
-    { name: "Divya Patel", initials: "DP", city: "Chennai", color: "#16A34A" },
-    { name: "Karthik Raja", initials: "KR", city: "Chennai", color: "#D97706" },
-    { name: "Nisha Das", initials: "ND", city: "Chennai", color: "#C0152A" },
-    { name: "Ravi Verma", initials: "RV", city: "Chennai", color: "#7C3AED" },
-  ],
-  "B-": [
-    { name: "Vikram Singh", initials: "VS", city: "Chennai", color: "#0891B2" },
-  ],
-  "AB+": [
-    { name: "Kavya Reddy", initials: "KR", city: "Chennai", color: "#C0152A" },
-    { name: "Meena Devi", initials: "MD", city: "Chennai", color: "#7C3AED" },
-  ],
-  "AB-": [],
+const initialsColor = (name: string) => {
+  const colors = ["#C0152A", "#2563EB", "#7C3AED", "#D97706", "#16A34A", "#0891B2"];
+  return colors[name.charCodeAt(0) % colors.length];
 };
+const initials = (name: string) =>
+  name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
 export function PatientRequest() {
   const [patientName, setPatientName] = useState("");
   const [bloodGroup, setBloodGroup] = useState<string | null>(null);
   const [units, setUnits] = useState(1);
-  const [hospital, setHospital] = useState("");
-  const [requestDate] = useState(new Date().toISOString().split("T")[0]);
+  const [hospitalId, setHospitalId] = useState<number | "">("");
   const [urgency, setUrgency] = useState<"Normal" | "Urgent">("Normal");
+  const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [requestId] = useState("#REQ-2026-" + String(Math.floor(Math.random() * 1000)).padStart(4, "0"));
+  const [matchedDonors, setMatchedDonors] = useState<MatchedDonor[]>([]);
+  const [matchMessage, setMatchMessage] = useState("");
+  const [submittedRequestId, setSubmittedRequestId] = useState<number | null>(null);
+  const [requestIdDisplay, setRequestIdDisplay] = useState("");
 
-  const matches = bloodGroup ? (MATCHING_DONORS[bloodGroup] || []) : [];
-  const availableMatches = matches.slice(0, 2);
-  const extraCount = Math.max(0, matches.length - 2);
+  useEffect(() => {
+    getHospitals().then(setHospitals).catch(console.error);
+  }, []);
 
-  const handleSubmit = () => {
-    if (!patientName || !bloodGroup || !hospital) return;
+  const handleSubmit = async () => {
+    if (!patientName || !bloodGroup || !hospitalId) return;
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSubmitted(true);
+    try {
+      const req = await createRequest({
+        patient_name: patientName,
+        blood_group: bloodGroup,
+        quantity_needed: units,
+        hospital_id: Number(hospitalId),
+      });
+      setSubmittedRequestId(req.request_id);
+      setRequestIdDisplay(`#REQ-${String(req.request_id).padStart(4, "0")}`);
+
+      // Fetch real matches
+      const result = await matchDonors(req.request_id);
+      setMatchedDonors(result.donors);
+      setMatchMessage(result.message);
       setShowModal(true);
-    }, 1500);
+    } catch (err: any) {
+      alert(err.message ?? "Failed to submit request");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const availableMatches = matchedDonors.slice(0, 2);
+  const extraCount = Math.max(0, matchedDonors.length - 2);
 
   return (
     <div className="p-6 lg:p-8 max-w-[1280px] mx-auto">
@@ -128,8 +119,8 @@ export function PatientRequest() {
                         key={group}
                         onClick={() => setBloodGroup(group)}
                         className={`h-12 rounded-lg border-2 transition-all hover:scale-105 active:scale-95 ${
-                          bloodGroup === group 
-                            ? "text-white" 
+                          bloodGroup === group
+                            ? "text-white"
                             : "text-[#374151] dark:text-gray-300 border-[#E5E7EB] dark:border-gray-600"
                         }`}
                         style={{
@@ -139,11 +130,8 @@ export function PatientRequest() {
                           ...(bloodGroup === group ? {
                             borderColor: bloodGroupColors[group],
                             background: bloodGroupColors[group],
-                            boxShadow: `0 4px 14px ${bloodGroupColors[group]}40`
-                          } : {
-                            background: "transparent",
-                            boxShadow: "none"
-                          })
+                            boxShadow: `0 4px 14px ${bloodGroupColors[group]}40`,
+                          } : { background: "transparent", boxShadow: "none" }),
                         }}
                       >
                         {group}
@@ -164,10 +152,7 @@ export function PatientRequest() {
                     >
                       <Minus className="w-4 h-4" />
                     </button>
-                    <span
-                      className="w-12 text-center text-[#111827] dark:text-white"
-                      style={{ fontSize: "20px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}
-                    >
+                    <span className="w-12 text-center text-[#111827] dark:text-white" style={{ fontSize: "20px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>
                       {units}
                     </span>
                     <button
@@ -188,59 +173,48 @@ export function PatientRequest() {
                     Hospital <span className="text-[#C0152A]">*</span>
                   </label>
                   <select
-                    value={hospital}
-                    onChange={(e) => setHospital(e.target.value)}
+                    value={hospitalId}
+                    onChange={(e) => setHospitalId(e.target.value ? Number(e.target.value) : "")}
                     className="w-full px-4 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-600 bg-[#F9FAFB] dark:bg-[#0D1117] text-[#111827] dark:text-gray-100 focus:border-[#C0152A] focus:ring-2 focus:ring-[#C0152A]/20 outline-none"
                     style={{ fontSize: "14px" }}
                   >
                     <option value="">Select a hospital...</option>
-                    {HOSPITALS.map((h) => (
-                      <option key={h} value={h}>{h}</option>
+                    {hospitals.map((h) => (
+                      <option key={h.hospital_id} value={h.hospital_id}>
+                        {h.name}, {h.city}
+                      </option>
                     ))}
                   </select>
                 </div>
 
-                {/* Date + Urgency */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[#374151] dark:text-gray-300 mb-1.5" style={{ fontSize: "13px", fontWeight: 500 }}>
-                      Request Date
-                    </label>
-                    <input
-                      type="date"
-                      defaultValue={requestDate}
-                      className="w-full px-4 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-600 bg-[#F9FAFB] dark:bg-[#0D1117] text-[#111827] dark:text-gray-100 focus:border-[#C0152A] focus:ring-2 focus:ring-[#C0152A]/20 outline-none"
-                      style={{ fontSize: "14px" }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[#374151] dark:text-gray-300 mb-1.5" style={{ fontSize: "13px", fontWeight: 500 }}>
-                      Urgency Level
-                    </label>
-                    <div className="flex gap-3">
-                      {(["Normal", "Urgent"] as const).map((level) => (
-                        <label key={level} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            checked={urgency === level}
-                            onChange={() => setUrgency(level)}
-                            className="accent-[#C0152A]"
-                          />
-                          <span style={{ fontSize: "13px", fontWeight: 500, color: level === "Urgent" && urgency === "Urgent" ? "#D97706" : "#374151" }}>
-                            {level}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                    {urgency === "Urgent" && (
-                      <div className="flex items-center gap-1.5 mt-2 p-2 rounded-lg" style={{ background: "#FFFBEB" }}>
-                        <AlertCircle className="w-3.5 h-3.5" style={{ color: "#D97706" }} />
-                        <span style={{ fontSize: "11px", color: "#D97706", fontWeight: 500 }}>
-                          Priority matching will be applied
+                {/* Urgency Level */}
+                <div>
+                  <label className="block text-[#374151] dark:text-gray-300 mb-1.5" style={{ fontSize: "13px", fontWeight: 500 }}>
+                    Urgency Level
+                  </label>
+                  <div className="flex gap-3">
+                    {(["Normal", "Urgent"] as const).map((level) => (
+                      <label key={level} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={urgency === level}
+                          onChange={() => setUrgency(level)}
+                          className="accent-[#C0152A]"
+                        />
+                        <span style={{ fontSize: "13px", fontWeight: 500, color: level === "Urgent" && urgency === "Urgent" ? "#D97706" : "#374151" }}>
+                          {level}
                         </span>
-                      </div>
-                    )}
+                      </label>
+                    ))}
                   </div>
+                  {urgency === "Urgent" && (
+                    <div className="flex items-center gap-1.5 mt-2 p-2 rounded-lg" style={{ background: "#FFFBEB" }}>
+                      <AlertCircle className="w-3.5 h-3.5" style={{ color: "#D97706" }} />
+                      <span style={{ fontSize: "11px", color: "#D97706", fontWeight: 500 }}>
+                        Priority matching will be applied
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -248,7 +222,7 @@ export function PatientRequest() {
             <div className="px-6 pb-6 pt-5">
               <button
                 onClick={handleSubmit}
-                disabled={loading || !patientName || !bloodGroup || !hospital}
+                disabled={loading || !patientName || !bloodGroup || !hospitalId}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-lg text-white transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "#C0152A", fontSize: "15px", fontWeight: 700 }}
               >
@@ -273,57 +247,47 @@ export function PatientRequest() {
               <h2 className="text-[#111827] dark:text-white" style={{ fontSize: "15px", fontWeight: 600 }}>
                 {bloodGroup ? `Matching Donors for ${bloodGroup}` : "Live Match Preview"}
               </h2>
-              {bloodGroup && (
-                <BloodGroupBadge group={bloodGroup} size="sm" />
-              )}
+              {bloodGroup && <BloodGroupBadge group={bloodGroup} size="sm" />}
             </div>
 
             {!bloodGroup ? (
               <div className="flex flex-col items-center py-12 text-center">
-                <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center mb-3"
-                  style={{ background: "#F3F4F6" }}
-                >
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mb-3" style={{ background: "#F3F4F6" }}>
                   <Droplets className="w-8 h-8 text-[#9CA3AF]" />
                 </div>
                 <p className="text-[#6B7280] dark:text-gray-400" style={{ fontSize: "13px" }}>
-                  Select a blood group to see matching donors
+                  Select a blood group and submit to see real matching donors
                 </p>
               </div>
-            ) : matches.length === 0 ? (
+            ) : matchedDonors.length === 0 && submittedRequestId ? (
               <div className="flex flex-col items-center py-12 text-center">
-                <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center mb-3"
-                  style={{ background: "#FDECEE" }}
-                >
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mb-3" style={{ background: "#FDECEE" }}>
                   <AlertCircle className="w-8 h-8" style={{ color: "#C0152A" }} />
                 </div>
-                <p className="text-[#C0152A]" style={{ fontSize: "14px", fontWeight: 600 }}>
-                  No donors available
-                </p>
+                <p className="text-[#C0152A]" style={{ fontSize: "14px", fontWeight: 600 }}>No donors available</p>
                 <p className="text-[#6B7280] dark:text-gray-400 mt-1" style={{ fontSize: "12px" }}>
-                  No {bloodGroup} donors currently available in your area
+                  No {bloodGroup} donors currently eligible (available &amp; 90-day gap met)
                 </p>
               </div>
-            ) : (
+            ) : submittedRequestId ? (
               <div className="space-y-3">
                 {availableMatches.map((donor) => (
                   <div
-                    key={donor.name}
+                    key={donor.donor_id}
                     className="flex items-center gap-3 p-3 rounded-xl bg-[#F9FAFB] dark:bg-[#0D1117] border border-[#F3F4F6] dark:border-gray-700/30"
                   >
                     <div
                       className="w-9 h-9 rounded-full flex items-center justify-center text-white flex-shrink-0"
-                      style={{ background: donor.color, fontSize: "12px", fontWeight: 700 }}
+                      style={{ background: initialsColor(donor.name), fontSize: "12px", fontWeight: 700 }}
                     >
-                      {donor.initials}
+                      {initials(donor.name)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[#111827] dark:text-gray-100 truncate" style={{ fontSize: "13px", fontWeight: 600 }}>
                         {donor.name}
                       </p>
                       <p className="text-[#6B7280] dark:text-gray-400" style={{ fontSize: "11px" }}>
-                        📍 {donor.city}
+                        {donor.days_since_donation != null ? `Last donated ${donor.days_since_donation}d ago` : "Never donated"}
                       </p>
                     </div>
                     <BloodGroupBadge group={bloodGroup} size="sm" />
@@ -339,9 +303,18 @@ export function PatientRequest() {
                 )}
                 <div className="pt-2 p-3 rounded-xl border border-[#16A34A]/20" style={{ background: "#F0FDF4" }}>
                   <p className="text-[#16A34A]" style={{ fontSize: "12px", fontWeight: 500 }}>
-                    ✅ {matches.length} donor{matches.length > 1 ? "s" : ""} match your blood group request
+                    ✅ {matchedDonors.length} donor{matchedDonors.length !== 1 ? "s" : ""} matched your blood group request
                   </p>
                 </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center py-12 text-center">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mb-3" style={{ background: "#F3F4F6" }}>
+                  <Droplets className="w-8 h-8 text-[#9CA3AF]" />
+                </div>
+                <p className="text-[#6B7280] dark:text-gray-400" style={{ fontSize: "13px" }}>
+                  Submit the form to see live matching donors for {bloodGroup}
+                </p>
               </div>
             )}
           </div>
@@ -363,26 +336,18 @@ export function PatientRequest() {
               <X className="w-4 h-4" />
             </button>
 
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: "#F0FDF4" }}
-            >
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "#F0FDF4" }}>
               <CheckCircle className="w-8 h-8" style={{ color: "#16A34A" }} />
             </div>
 
             <h3 className="text-[#111827] dark:text-white mb-2" style={{ fontSize: "20px", fontWeight: 700 }}>
               Request Submitted!
             </h3>
-            <p
-              className="text-[#6B7280] dark:text-gray-400 mb-1"
-              style={{ fontSize: "13px", fontFamily: "'JetBrains Mono', monospace" }}
-            >
-              Request ID: {requestId}
+            <p className="text-[#6B7280] dark:text-gray-400 mb-1" style={{ fontSize: "13px", fontFamily: "'JetBrains Mono', monospace" }}>
+              Request ID: {requestIdDisplay}
             </p>
             <p className="text-[#6B7280] dark:text-gray-400 mb-6" style={{ fontSize: "14px" }}>
-              {matches.length} donor{matches.length !== 1 ? "s" : ""} matched for{" "}
-              <strong>{bloodGroup}</strong>.{" "}
-              We'll notify the hospital within 15 minutes.
+              {matchMessage}
             </p>
 
             <div className="flex gap-3">
@@ -391,7 +356,7 @@ export function PatientRequest() {
                 className="flex-1 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-600 text-[#374151] dark:text-gray-300 hover:bg-[#F3F4F6] dark:hover:bg-gray-700 transition-colors"
                 style={{ fontSize: "13px", fontWeight: 600 }}
               >
-                View All Requests
+                View Results
               </button>
               <button
                 onClick={() => {
@@ -399,9 +364,10 @@ export function PatientRequest() {
                   setPatientName("");
                   setBloodGroup(null);
                   setUnits(1);
-                  setHospital("");
+                  setHospitalId("");
                   setUrgency("Normal");
-                  setSubmitted(false);
+                  setMatchedDonors([]);
+                  setSubmittedRequestId(null);
                 }}
                 className="flex-1 py-2.5 rounded-lg text-white transition-all hover:opacity-90"
                 style={{ background: "#C0152A", fontSize: "13px", fontWeight: 600 }}

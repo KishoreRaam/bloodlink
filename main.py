@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db_pool, test_connection
 from routes import donors, blood_banks, hospitals, requests, donations, matching
@@ -17,6 +18,14 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(donors.router,      prefix="/donors",       tags=["Donors"])
 app.include_router(blood_banks.router, prefix="/blood-banks",  tags=["Blood Banks"])
 app.include_router(hospitals.router,   prefix="/hospitals",    tags=["Hospitals"])
@@ -28,11 +37,11 @@ app.include_router(matching.router,    tags=["Matching"])
 @app.on_event("startup")
 async def startup_event() -> None:
     logger.info("Initialising database connection pool...")
-    init_db_pool()
-    if test_connection():
+    try:
+        init_db_pool()
         logger.info("Database connection verified successfully.")
-    else:
-        logger.warning("Database connection test failed on startup.")
+    except RuntimeError as exc:
+        logger.warning("Database unavailable on startup: %s — endpoints will return 503 until DB is reachable.", exc)
 
 
 @app.get("/health", tags=["Health"])

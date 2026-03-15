@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, CheckCircle, User, Droplets, Phone, MapPin, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, User, Droplets, Phone, AlertCircle, Loader2 } from "lucide-react";
+import { createDonor } from "../services/api";
 
 const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
@@ -42,15 +43,23 @@ export function DonorRegistration() {
     return newErrors;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await createDonor({
+        name: form.name,
+        age: Number(form.age),
+        gender,
+        blood_group: selectedGroup!,
+        contact_number: form.phone,
+        address: form.address,
+        availability_status: availability ? "Available" : "Not Available",
+      });
       setSuccess(true);
       setShowSuccess(true);
       setTimeout(() => {
@@ -61,7 +70,16 @@ export function DonorRegistration() {
         setAvailability(true);
         setGender("Male");
       }, 2500);
-    }, 1500);
+    } catch (err: any) {
+      const msg = err.message ?? "Registration failed";
+      if (msg.toLowerCase().includes("contact number")) {
+        setErrors((e) => ({ ...e, phone: msg }));
+      } else {
+        setErrors((e) => ({ ...e, phone: msg }));
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

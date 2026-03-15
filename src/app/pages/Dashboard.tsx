@@ -1,84 +1,100 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Users, CheckCircle, Clock, Droplets, TrendingUp, TrendingDown, ArrowRight, MapPin } from "lucide-react";
 import { BloodGroupBadge } from "../components/ui/BloodGroupBadge";
 import { StatusBadge } from "../components/ui/StatusBadge";
+import { getDonors, getRequests, type Donor, type PatientRequest } from "../services/api";
 
-const statCards = [
-  {
-    title: "Total Donors",
-    value: "247",
-    trend: "+4 this week",
-    trendUp: true,
-    icon: Users,
-    iconColor: "#C0152A",
-    iconBg: "#FDECEE",
-  },
-  {
-    title: "Available Now",
-    value: "183",
-    trend: "74% of total",
-    trendUp: true,
-    icon: CheckCircle,
-    iconColor: "#16A34A",
-    iconBg: "#F0FDF4",
-  },
-  {
-    title: "Pending Requests",
-    value: "12",
-    trend: "3 urgent",
-    trendUp: false,
-    icon: Clock,
-    iconColor: "#D97706",
-    iconBg: "#FFFBEB",
-  },
-  {
-    title: "Total Donated",
-    value: "94 units",
-    trend: "this month",
-    trendUp: true,
-    icon: Droplets,
-    iconColor: "#7C3AED",
-    iconBg: "#F5F3FF",
-  },
-];
-
-const bloodGroupData = [
-  { group: "O+",  count: 52, color: "#C0152A" },
-  { group: "A+",  count: 38, color: "#2563EB" },
-  { group: "B+",  count: 29, color: "#7C3AED" },
-  { group: "AB+", count: 18, color: "#D97706" },
-  { group: "O-",  count: 22, color: "#DC2626" },
-  { group: "A-",  count: 14, color: "#1D4ED8" },
-  { group: "B-",  count: 7,  color: "#5B21B6" },
-  { group: "AB-", count: 3,  color: "#B45309" },
-];
-
-const maxCount = Math.max(...bloodGroupData.map((d) => d.count));
-
-const recentRequests = [
-  { id: "#REQ-001", patient: "Kavya Reddy",  blood: "O-",  hospital: "Apollo Hospital",  date: "Mar 14", status: "Urgent"    as const },
-  { id: "#REQ-002", patient: "Arjun Mehta",  blood: "A+",  hospital: "AIIMS Chennai",    date: "Mar 14", status: "Pending"   as const },
-  { id: "#REQ-003", patient: "Priya Nair",   blood: "B+",  hospital: "Fortis Health",    date: "Mar 13", status: "Fulfilled" as const },
-  { id: "#REQ-004", patient: "Ravi Kumar",   blood: "AB+", hospital: "Manipal Hospital", date: "Mar 13", status: "Pending"   as const },
-  { id: "#REQ-005", patient: "Sunita Das",   blood: "O+",  hospital: "Apollo Hospital",  date: "Mar 12", status: "Fulfilled" as const },
-];
-
-const recentDonors = [
-  { name: "Rahul Kumar",  blood: "O+",  location: "Chennai",    status: "Available"    as const, initials: "RK" },
-  { name: "Meena Devi",   blood: "AB+", location: "Coimbatore", status: "Available"    as const, initials: "MD" },
-  { name: "Priya Sharma", blood: "A+",  location: "Chennai",    status: "Available"    as const, initials: "PS" },
-  { name: "Karthik Raja", blood: "B-",  location: "Madurai",    status: "Not Available" as const, initials: "KR" },
-  { name: "Ananya Iyer",  blood: "O-",  location: "Trichy",     status: "Available"    as const, initials: "AI" },
-  { name: "Vikram Singh", blood: "B+",  location: "Salem",      status: "Pending"      as const, initials: "VS" },
-];
+const BLOOD_GROUPS = ["O+", "A+", "B+", "AB+", "O-", "A-", "B-", "AB-"];
+const BLOOD_COLORS: Record<string, string> = {
+  "O+": "#C0152A", "A+": "#2563EB", "B+": "#7C3AED", "AB+": "#D97706",
+  "O-": "#DC2626", "A-": "#1D4ED8", "B-": "#5B21B6", "AB-": "#B45309",
+};
 
 const initialsColor = (name: string) => {
   const colors = ["#C0152A", "#2563EB", "#7C3AED", "#D97706", "#16A34A", "#0891B2"];
   return colors[name.charCodeAt(0) % colors.length];
 };
 
+const initials = (name: string) =>
+  name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
 export function Dashboard() {
   const navigate = useNavigate();
+  const [donors, setDonors] = useState<Donor[]>([]);
+  const [requests, setRequests] = useState<PatientRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getDonors(), getRequests()])
+      .then(([d, r]) => {
+        setDonors(d);
+        setRequests(r);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const totalDonors = donors.length;
+  const availableDonors = donors.filter((d) => d.availability_status === "Available").length;
+  const pendingRequests = requests.filter((r) => r.status === "Pending").length;
+
+  const bloodGroupData = BLOOD_GROUPS.map((group) => ({
+    group,
+    count: donors.filter((d) => d.blood_group === group).length,
+    color: BLOOD_COLORS[group],
+  }));
+  const maxCount = Math.max(...bloodGroupData.map((d) => d.count), 1);
+
+  const recentRequests = [...requests]
+    .sort((a, b) => new Date(b.request_date).getTime() - new Date(a.request_date).getTime())
+    .slice(0, 5);
+
+  const recentDonors = [...donors]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 6);
+
+  const statCards = [
+    {
+      title: "Total Donors",
+      value: loading ? "—" : String(totalDonors),
+      trend: "registered",
+      trendUp: true,
+      icon: Users,
+      iconColor: "#C0152A",
+      iconBg: "#FDECEE",
+    },
+    {
+      title: "Available Now",
+      value: loading ? "—" : String(availableDonors),
+      trend: totalDonors ? `${Math.round((availableDonors / totalDonors) * 100)}% of total` : "0%",
+      trendUp: true,
+      icon: CheckCircle,
+      iconColor: "#16A34A",
+      iconBg: "#F0FDF4",
+    },
+    {
+      title: "Pending Requests",
+      value: loading ? "—" : String(pendingRequests),
+      trend: pendingRequests > 0 ? "awaiting donors" : "all clear",
+      trendUp: pendingRequests === 0,
+      icon: Clock,
+      iconColor: "#D97706",
+      iconBg: "#FFFBEB",
+    },
+    {
+      title: "Total Donated",
+      value: loading ? "—" : `${requests.filter((r) => r.status === "Fulfilled").length} units`,
+      trend: "fulfilled",
+      trendUp: true,
+      icon: Droplets,
+      iconColor: "#7C3AED",
+      iconBg: "#F5F3FF",
+    },
+  ];
 
   return (
     <div className="p-6 lg:p-8 max-w-[1280px] mx-auto space-y-8">
@@ -89,7 +105,7 @@ export function Dashboard() {
             Dashboard
           </h1>
           <p className="text-[#6B7280] dark:text-gray-400 mt-0.5" style={{ fontSize: "14px" }}>
-            Sunday, March 15, 2026 — Overview & Recent Activity
+            {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} — Overview & Recent Activity
           </p>
         </div>
         <button
@@ -161,62 +177,66 @@ export function Dashboard() {
             </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#F9FAFB] dark:bg-[#0D1117]/50">
-                  {["Patient", "Blood", "Hospital", "Date", "Status", "Action"].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-4 py-3 text-[#6B7280] dark:text-gray-500"
-                      style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em" }}
-                    >
-                      {h.toUpperCase()}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {recentRequests.map((req) => (
-                  <tr
-                    key={req.id}
-                    className="border-t border-[#F3F4F6] dark:border-gray-700/30 hover:bg-[#FDECEE]/40 dark:hover:bg-[#C0152A]/5 transition-colors"
-                  >
-                    <td className="px-4 py-3">
-                      <div>
-                        <p className="text-[#111827] dark:text-gray-100" style={{ fontSize: "13px", fontWeight: 500 }}>
-                          {req.patient}
-                        </p>
-                        <p className="text-[#6B7280] dark:text-gray-500" style={{ fontSize: "11px" }}>{req.id}</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <BloodGroupBadge group={req.blood} size="sm" />
-                    </td>
-                    <td className="px-4 py-3 text-[#6B7280] dark:text-gray-400" style={{ fontSize: "12px" }}>
-                      {req.hospital}
-                    </td>
-                    <td className="px-4 py-3 text-[#6B7280] dark:text-gray-400" style={{ fontSize: "12px" }}>
-                      {req.date}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={req.status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        className="px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity"
-                        style={{ background: "#C0152A", fontSize: "11px", fontWeight: 600 }}
+            {loading ? (
+              <div className="flex items-center justify-center py-12 text-[#6B7280] dark:text-gray-400" style={{ fontSize: "13px" }}>
+                Loading requests…
+              </div>
+            ) : recentRequests.length === 0 ? (
+              <div className="flex items-center justify-center py-12 text-[#6B7280] dark:text-gray-400" style={{ fontSize: "13px" }}>
+                No requests yet
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-[#F9FAFB] dark:bg-[#0D1117]/50">
+                    {["Patient", "Blood", "Hospital", "Date", "Status"].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left px-4 py-3 text-[#6B7280] dark:text-gray-500"
+                        style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em" }}
                       >
-                        Fulfil
-                      </button>
-                    </td>
+                        {h.toUpperCase()}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {recentRequests.map((req) => (
+                    <tr
+                      key={req.request_id}
+                      className="border-t border-[#F3F4F6] dark:border-gray-700/30 hover:bg-[#FDECEE]/40 dark:hover:bg-[#C0152A]/5 transition-colors"
+                    >
+                      <td className="px-4 py-3">
+                        <div>
+                          <p className="text-[#111827] dark:text-gray-100" style={{ fontSize: "13px", fontWeight: 500 }}>
+                            {req.patient_name}
+                          </p>
+                          <p className="text-[#6B7280] dark:text-gray-500" style={{ fontSize: "11px" }}>
+                            #{String(req.request_id).padStart(3, "0")}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <BloodGroupBadge group={req.blood_group} size="sm" />
+                      </td>
+                      <td className="px-4 py-3 text-[#6B7280] dark:text-gray-400" style={{ fontSize: "12px" }}>
+                        {req.hospital_name ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-[#6B7280] dark:text-gray-400" style={{ fontSize: "12px" }}>
+                        {formatDate(req.request_date)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={req.status as any} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
-        {/* Blood Group Availability — custom CSS bars (avoids Recharts key conflicts) */}
+        {/* Blood Group Availability */}
         <div
           className="xl:col-span-5 bg-white dark:bg-[#1A1F2E] rounded-[12px] border border-[#E5E7EB] dark:border-gray-700/50 p-6"
           style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}
@@ -231,13 +251,7 @@ export function Dashboard() {
                 <div key={entry.group} className="flex items-center gap-3">
                   <span
                     className="flex-shrink-0 text-right"
-                    style={{
-                      width: "32px",
-                      fontSize: "11px",
-                      fontFamily: "'JetBrains Mono', monospace",
-                      color: "#6B7280",
-                      fontWeight: 600,
-                    }}
+                    style={{ width: "32px", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "#6B7280", fontWeight: 600 }}
                   >
                     {entry.group}
                   </span>
@@ -247,10 +261,7 @@ export function Dashboard() {
                       style={{ width: `${pct}%`, background: entry.color, opacity: 0.85 }}
                     />
                   </div>
-                  <span
-                    className="flex-shrink-0"
-                    style={{ width: "28px", fontSize: "11px", color: "#6B7280", textAlign: "right" }}
-                  >
+                  <span className="flex-shrink-0" style={{ width: "28px", fontSize: "11px", color: "#6B7280", textAlign: "right" }}>
                     {entry.count}
                   </span>
                 </div>
@@ -274,38 +285,46 @@ export function Dashboard() {
             Search all <ArrowRight className="w-3 h-3" />
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {recentDonors.map((donor) => (
-            <div
-              key={donor.name}
-              onClick={() => navigate("/profile")}
-              className="bg-white dark:bg-[#1A1F2E] rounded-[12px] border border-[#E5E7EB] dark:border-gray-700/50 p-5 flex items-center gap-4 cursor-pointer hover:shadow-lg dark:hover:shadow-black/30 transition-all hover:-translate-y-0.5"
-              style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}
-            >
+        {loading ? (
+          <p className="text-[#6B7280] dark:text-gray-400 text-sm">Loading donors…</p>
+        ) : recentDonors.length === 0 ? (
+          <p className="text-[#6B7280] dark:text-gray-400 text-sm">No donors registered yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recentDonors.map((donor) => (
               <div
-                className="w-11 h-11 rounded-full flex items-center justify-center text-white flex-shrink-0"
-                style={{ background: initialsColor(donor.name), fontSize: "14px", fontWeight: 700 }}
+                key={donor.donor_id}
+                onClick={() => navigate(`/profile/${donor.donor_id}`)}
+                className="bg-white dark:bg-[#1A1F2E] rounded-[12px] border border-[#E5E7EB] dark:border-gray-700/50 p-5 flex items-center gap-4 cursor-pointer hover:shadow-lg dark:hover:shadow-black/30 transition-all hover:-translate-y-0.5"
+                style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}
               >
-                {donor.initials}
+                <div
+                  className="w-11 h-11 rounded-full flex items-center justify-center text-white flex-shrink-0"
+                  style={{ background: initialsColor(donor.name), fontSize: "14px", fontWeight: 700 }}
+                >
+                  {initials(donor.name)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-[#111827] dark:text-gray-100 truncate" style={{ fontSize: "14px", fontWeight: 600 }}>
+                      {donor.name}
+                    </p>
+                    <BloodGroupBadge group={donor.blood_group} size="sm" />
+                  </div>
+                  {donor.address && (
+                    <div className="flex items-center gap-1 text-[#6B7280] dark:text-gray-400" style={{ fontSize: "12px" }}>
+                      <MapPin className="w-3 h-3" />
+                      <span className="truncate">{donor.address.split(",").slice(-1)[0].trim()}</span>
+                    </div>
+                  )}
+                  <div className="mt-1.5">
+                    <StatusBadge status={donor.availability_status as any} compact />
+                  </div>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-[#111827] dark:text-gray-100 truncate" style={{ fontSize: "14px", fontWeight: 600 }}>
-                    {donor.name}
-                  </p>
-                  <BloodGroupBadge group={donor.blood} size="sm" />
-                </div>
-                <div className="flex items-center gap-1 text-[#6B7280] dark:text-gray-400" style={{ fontSize: "12px" }}>
-                  <MapPin className="w-3 h-3" />
-                  <span>{donor.location}</span>
-                </div>
-                <div className="mt-1.5">
-                  <StatusBadge status={donor.status} compact />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

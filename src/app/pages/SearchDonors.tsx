@@ -1,27 +1,20 @@
-import { useState } from "react";
-import { Search, MapPin, Phone, Eye, EyeOff, MessageCircle, X, Droplets, Filter } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, MapPin, Phone, Eye, EyeOff, MessageCircle, X, Droplets } from "lucide-react";
 import { BloodGroupBadge } from "../components/ui/BloodGroupBadge";
 import { StatusBadge } from "../components/ui/StatusBadge";
-
-const ALL_DONORS = [
-  { id: 1, name: "Rahul Kumar", initials: "RK", blood: "O+", city: "Chennai", phone: "98765•••••", fullPhone: "+91 98765 43210", status: "Available" as const, color: "#C0152A" },
-  { id: 2, name: "Meena Devi", initials: "MD", blood: "O+", city: "Chennai", phone: "87654•••••", fullPhone: "+91 87654 32109", status: "Available" as const, color: "#7C3AED" },
-  { id: 3, name: "Priya Sharma", initials: "PS", blood: "A+", city: "Coimbatore", phone: "76543•••••", fullPhone: "+91 76543 21098", status: "Available" as const, color: "#2563EB" },
-  { id: 4, name: "Karthik Raja", initials: "KR", blood: "B+", city: "Madurai", phone: "65432•••••", fullPhone: "+91 65432 10987", status: "Not Available" as const, color: "#D97706" },
-  { id: 5, name: "Ananya Iyer", initials: "AI", blood: "O-", city: "Trichy", phone: "54321•••••", fullPhone: "+91 54321 09876", status: "Available" as const, color: "#16A34A" },
-  { id: 6, name: "Vikram Singh", initials: "VS", blood: "B-", city: "Salem", phone: "43210•••••", fullPhone: "+91 43210 98765", status: "Pending" as const, color: "#0891B2" },
-  { id: 7, name: "Kavya Reddy", initials: "KR", blood: "AB+", city: "Chennai", phone: "32109•••••", fullPhone: "+91 32109 87654", status: "Available" as const, color: "#C0152A" },
-  { id: 8, name: "Arjun Mehta", initials: "AM", blood: "A-", city: "Chennai", phone: "21098•••••", fullPhone: "+91 21098 76543", status: "Not Available" as const, color: "#2563EB" },
-  { id: 9, name: "Sunita Das", initials: "SD", blood: "AB-", city: "Coimbatore", phone: "10987•••••", fullPhone: "+91 10987 65432", status: "Available" as const, color: "#7C3AED" },
-  { id: 10, name: "Mohan Lal", initials: "ML", blood: "O+", city: "Madurai", phone: "09876•••••", fullPhone: "+91 09876 54321", status: "Available" as const, color: "#D97706" },
-  { id: 11, name: "Divya Patel", initials: "DP", blood: "B+", city: "Chennai", phone: "98761•••••", fullPhone: "+91 98761 23456", status: "Available" as const, color: "#16A34A" },
-  { id: 12, name: "Sanjay Gupta", initials: "SG", blood: "A+", city: "Salem", phone: "87651•••••", fullPhone: "+91 87651 23456", status: "Not Available" as const, color: "#C0152A" },
-];
+import { getDonors, type Donor } from "../services/api";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
+const initialsColor = (name: string) => {
+  const colors = ["#C0152A", "#2563EB", "#7C3AED", "#D97706", "#16A34A", "#0891B2"];
+  return colors[name.charCodeAt(0) % colors.length];
+};
+const initials = (name: string) =>
+  name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+
 interface ContactModalProps {
-  donor: typeof ALL_DONORS[0];
+  donor: Donor;
   onClose: () => void;
 }
 
@@ -42,19 +35,21 @@ function ContactModal({ donor, onClose }: ContactModalProps) {
         <div className="flex items-center gap-4 mb-5">
           <div
             className="w-14 h-14 rounded-full flex items-center justify-center text-white"
-            style={{ background: donor.color, fontSize: "18px", fontWeight: 700 }}
+            style={{ background: initialsColor(donor.name), fontSize: "18px", fontWeight: 700 }}
           >
-            {donor.initials}
+            {initials(donor.name)}
           </div>
           <div>
             <h3 className="text-[#111827] dark:text-white" style={{ fontSize: "16px", fontWeight: 700 }}>
               {donor.name}
             </h3>
             <div className="flex items-center gap-2 mt-1">
-              <BloodGroupBadge group={donor.blood} size="sm" />
-              <span className="text-[#6B7280] dark:text-gray-400" style={{ fontSize: "12px" }}>
-                📍 {donor.city}
-              </span>
+              <BloodGroupBadge group={donor.blood_group} size="sm" />
+              {donor.address && (
+                <span className="text-[#6B7280] dark:text-gray-400" style={{ fontSize: "12px" }}>
+                  📍 {donor.address.split(",").slice(-1)[0].trim()}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -63,11 +58,11 @@ function ContactModal({ donor, onClose }: ContactModalProps) {
             CONTACT NUMBER
           </p>
           <p className="text-[#111827] dark:text-white" style={{ fontSize: "20px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>
-            {donor.fullPhone}
+            +91 {donor.contact_number}
           </p>
         </div>
         <a
-          href={`https://wa.me/${donor.fullPhone.replace(/\D/g, "")}`}
+          href={`https://wa.me/91${donor.contact_number.replace(/\D/g, "")}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white"
@@ -82,13 +77,21 @@ function ContactModal({ donor, onClose }: ContactModalProps) {
 }
 
 export function SearchDonors() {
+  const [allDonors, setAllDonors] = useState<Donor[]>([]);
+  const [loadingDonors, setLoadingDonors] = useState(true);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [cityFilter, setCityFilter] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [revealedPhones, setRevealedPhones] = useState<Set<number>>(new Set());
-  const [contactModal, setContactModal] = useState<typeof ALL_DONORS[0] | null>(null);
+  const [contactModal, setContactModal] = useState<Donor | null>(null);
   const [searched, setSearched] = useState(false);
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
+
+  useEffect(() => {
+    getDonors()
+      .then(setAllDonors)
+      .catch(console.error)
+      .finally(() => setLoadingDonors(false));
+  }, []);
 
   const toggleGroup = (g: string) =>
     setSelectedGroups((prev) =>
@@ -103,10 +106,10 @@ export function SearchDonors() {
       return next;
     });
 
-  const filtered = ALL_DONORS.filter((d) => {
-    const groupMatch = selectedGroups.length === 0 || selectedGroups.includes(d.blood);
-    const cityMatch = !cityFilter || d.city.toLowerCase().includes(cityFilter.toLowerCase());
-    const availMatch = !availableOnly || d.status === "Available";
+  const filtered = allDonors.filter((d) => {
+    const groupMatch = selectedGroups.length === 0 || selectedGroups.includes(d.blood_group);
+    const cityMatch = !cityFilter || (d.address ?? "").toLowerCase().includes(cityFilter.toLowerCase());
+    const availMatch = !availableOnly || d.availability_status === "Available";
     return groupMatch && cityMatch && availMatch;
   });
 
@@ -118,7 +121,7 @@ export function SearchDonors() {
     setSearched(false);
   };
 
-  const results = searched ? filtered : ALL_DONORS;
+  const results = searched ? filtered : allDonors;
 
   return (
     <div className="p-6 lg:p-8 max-w-[1280px] mx-auto">
@@ -173,7 +176,7 @@ export function SearchDonors() {
               type="text"
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
-              placeholder="e.g. Chennai"
+              placeholder="e.g. Mumbai"
               className="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] dark:border-gray-600 bg-[#F9FAFB] dark:bg-[#0D1117] text-[#111827] dark:text-gray-100 focus:border-[#C0152A] focus:ring-2 focus:ring-[#C0152A]/20 outline-none placeholder-[#9CA3AF] dark:placeholder-gray-600"
               style={{ fontSize: "13px" }}
             />
@@ -232,7 +235,7 @@ export function SearchDonors() {
         <p className="text-[#6B7280] dark:text-gray-400" style={{ fontSize: "13px" }}>
           Showing{" "}
           <span className="text-[#111827] dark:text-white" style={{ fontWeight: 600 }}>
-            {results.filter((d) => d.status === "Available").length} available
+            {results.filter((d) => d.availability_status === "Available").length} available
           </span>{" "}
           donors
           {selectedGroups.length > 0 && ` for ${selectedGroups.join(", ")}`}
@@ -240,22 +243,23 @@ export function SearchDonors() {
         </p>
       </div>
 
-      {/* Donor Cards or Empty State */}
-      {results.length === 0 ? (
+      {/* Loading */}
+      {loadingDonors ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div
-            className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
-            style={{ background: "#FDECEE" }}
-          >
+          <Droplets className="w-10 h-10 mb-3 animate-pulse" style={{ color: "#C0152A" }} />
+          <p className="text-[#6B7280] dark:text-gray-400" style={{ fontSize: "14px" }}>Loading donors…</p>
+        </div>
+      ) : results.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4" style={{ background: "#FDECEE" }}>
             <Droplets className="w-10 h-10" style={{ color: "#C0152A" }} />
           </div>
           <h3 className="text-[#111827] dark:text-white mb-2" style={{ fontSize: "18px", fontWeight: 600 }}>
             🩸 No donors found
           </h3>
           <p className="text-[#6B7280] dark:text-gray-400 mb-6 max-w-sm" style={{ fontSize: "14px" }}>
-            No available donors found
-            {selectedGroups.length > 0 && ` for ${selectedGroups.join(", ")}`}
-            {cityFilter && ` in ${cityFilter}`}. Try expanding your search area or check back later.
+            No donors found{selectedGroups.length > 0 && ` for ${selectedGroups.join(", ")}`}
+            {cityFilter && ` in ${cityFilter}`}. Try expanding your search.
           </p>
           <button
             onClick={handleClear}
@@ -269,56 +273,52 @@ export function SearchDonors() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {results.map((donor) => (
             <div
-              key={donor.id}
+              key={donor.donor_id}
               className={`bg-white dark:bg-[#1A1F2E] rounded-[12px] border border-[#E5E7EB] dark:border-gray-700/50 p-5 transition-all ${
-                donor.status === "Not Available" ? "opacity-50" : "hover:shadow-lg dark:hover:shadow-black/30 hover:-translate-y-0.5"
+                donor.availability_status === "Not Available"
+                  ? "opacity-50"
+                  : "hover:shadow-lg dark:hover:shadow-black/30 hover:-translate-y-0.5"
               }`}
               style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}
             >
-              {/* Avatar + Blood */}
               <div className="flex items-center justify-between mb-4">
                 <div
                   className="w-12 h-12 rounded-full flex items-center justify-center text-white"
-                  style={{ background: donor.color, fontSize: "16px", fontWeight: 700 }}
+                  style={{ background: initialsColor(donor.name), fontSize: "16px", fontWeight: 700 }}
                 >
-                  {donor.initials}
+                  {initials(donor.name)}
                 </div>
-                <BloodGroupBadge group={donor.blood} />
+                <BloodGroupBadge group={donor.blood_group} />
               </div>
 
-              {/* Info */}
               <h3 className="text-[#111827] dark:text-gray-100 mb-1" style={{ fontSize: "15px", fontWeight: 600 }}>
                 {donor.name}
               </h3>
-              <div className="flex items-center gap-1 text-[#6B7280] dark:text-gray-400 mb-2" style={{ fontSize: "12px" }}>
-                <MapPin className="w-3 h-3" />
-                <span>{donor.city}</span>
-              </div>
+              {donor.address && (
+                <div className="flex items-center gap-1 text-[#6B7280] dark:text-gray-400 mb-2" style={{ fontSize: "12px" }}>
+                  <MapPin className="w-3 h-3" />
+                  <span className="truncate">{donor.address.split(",").slice(-1)[0].trim()}</span>
+                </div>
+              )}
 
               {/* Phone */}
               <div className="flex items-center gap-2 mb-3">
                 <Phone className="w-3 h-3 text-[#6B7280] dark:text-gray-400" />
-                <span
-                  className="text-[#6B7280] dark:text-gray-400"
-                  style={{ fontSize: "12px", fontFamily: "'JetBrains Mono', monospace" }}
-                >
-                  {revealedPhones.has(donor.id) ? donor.fullPhone : donor.phone}
+                <span className="text-[#6B7280] dark:text-gray-400" style={{ fontSize: "12px", fontFamily: "'JetBrains Mono', monospace" }}>
+                  {revealedPhones.has(donor.donor_id)
+                    ? `+91 ${donor.contact_number}`
+                    : donor.contact_number.slice(0, 5) + "•••••"}
                 </span>
-                <button
-                  onClick={() => toggleReveal(donor.id)}
-                  className="text-[#C0152A] dark:text-[#ff6b7a] hover:opacity-70"
-                >
-                  {revealedPhones.has(donor.id) ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                <button onClick={() => toggleReveal(donor.donor_id)} className="text-[#C0152A] dark:text-[#ff6b7a] hover:opacity-70">
+                  {revealedPhones.has(donor.donor_id) ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                 </button>
               </div>
 
-              {/* Status */}
               <div className="mb-4">
-                <StatusBadge status={donor.status} compact />
+                <StatusBadge status={donor.availability_status as any} compact />
               </div>
 
-              {/* CTA */}
-              {donor.status !== "Not Available" && (
+              {donor.availability_status !== "Not Available" && (
                 <button
                   onClick={() => setContactModal(donor)}
                   className="w-full py-2.5 rounded-lg text-white transition-all hover:opacity-90"
@@ -332,7 +332,6 @@ export function SearchDonors() {
         </div>
       )}
 
-      {/* Contact Modal */}
       {contactModal && (
         <ContactModal donor={contactModal} onClose={() => setContactModal(null)} />
       )}
