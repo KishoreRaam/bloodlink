@@ -6,11 +6,11 @@ import mysql.connector
 from auth_utils import hash_password
 
 conn = mysql.connector.connect(
-    host="localhost",
-    port=3306,
+    host="shuttle.proxy.rlwy.net",
+    port=44519,
     user="root",
-    password="raam06",
-    database="blood_management_system",
+    password="CzVUBaOLekByVcZBVtjzphBPTPVcjGVG",
+    database="railway",
 )
 cursor = conn.cursor()
 

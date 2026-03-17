@@ -2,10 +2,13 @@ import logging
 import os
 from contextlib import contextmanager
 from typing import Generator
+from dotenv import load_dotenv
 
 import mysql.connector
 from mysql.connector import pooling, Error as MySQLError
 from fastapi import HTTPException
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
