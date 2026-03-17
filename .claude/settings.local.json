@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(cd \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink\" && pip install -r requirements.txt 2>&1)",
-      "Bash(ls \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink\"/*.py \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink\"/*.sql \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink\"/*.txt \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink\"/*.md 2>/dev/null && ls \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink/routes/\" && ls \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink/models/\")"
+      "Bash(ls \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink\"/*.py \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink\"/*.sql \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink\"/*.txt \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink\"/*.md 2>/dev/null && ls \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink/routes/\" && ls \"C:\\\\Users\\\\Raam\\\\Downloads\\\\bloodlink/models/\")",
+      "Bash(cd:*)",
+      "Bash(pip install:*)",
+      "mcp__claude_ai_Figma__get_design_context",
+      "mcp__claude_ai_Figma__get_screenshot",
+      "Bash(mysql:*)"
     ]
   }
 }

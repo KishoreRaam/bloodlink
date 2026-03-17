@@ -109,7 +109,7 @@ export function Dashboard() {
           </p>
         </div>
         <button
-          onClick={() => navigate("/register")}
+          onClick={() => navigate("/admin/register")}
           className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-lg text-white text-sm font-semibold shadow-md shadow-red-900/20 hover:shadow-lg transition-all hover:scale-[1.02]"
           style={{ background: "#C0152A" }}
         >
@@ -169,7 +169,7 @@ export function Dashboard() {
               Recent Patient Requests
             </h2>
             <button
-              onClick={() => navigate("/request")}
+              onClick={() => navigate("/admin/request")}
               className="flex items-center gap-1 text-[#C0152A] dark:text-[#ff6b7a] hover:underline"
               style={{ fontSize: "12px", fontWeight: 500 }}
             >
@@ -278,7 +278,7 @@ export function Dashboard() {
             Recent Donor Registrations
           </h2>
           <button
-            onClick={() => navigate("/search")}
+            onClick={() => navigate("/admin/search")}
             className="flex items-center gap-1 text-[#C0152A] dark:text-[#ff6b7a] hover:underline"
             style={{ fontSize: "12px", fontWeight: 500 }}
           >
@@ -294,7 +294,7 @@ export function Dashboard() {
             {recentDonors.map((donor) => (
               <div
                 key={donor.donor_id}
-                onClick={() => navigate(`/profile/${donor.donor_id}`)}
+                onClick={() => navigate(`/admin/profile/${donor.donor_id}`)}
                 className="bg-white dark:bg-[#1A1F2E] rounded-[12px] border border-[#E5E7EB] dark:border-gray-700/50 p-5 flex items-center gap-4 cursor-pointer hover:shadow-lg dark:hover:shadow-black/30 transition-all hover:-translate-y-0.5"
                 style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}
               >

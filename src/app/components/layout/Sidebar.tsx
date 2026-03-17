@@ -5,28 +5,30 @@ import {
   CalendarDays, Bell, BarChart3, Settings, LogOut,
   Droplets, Sun, Moon, X
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 interface SidebarProps {
   onClose?: () => void;
 }
 
 const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard, to: "/" },
-  { label: "Donor Registration", icon: UserPlus, to: "/register" },
-  { label: "Search Donors", icon: Search, to: "/search" },
-  { label: "Patient Request", icon: AlertCircle, to: "/request" },
+  { label: "Dashboard", icon: LayoutDashboard, to: "/admin" },
+  { label: "Donor Registration", icon: UserPlus, to: "/admin/register" },
+  { label: "Search Donors", icon: Search, to: "/admin/search" },
+  { label: "Patient Request", icon: AlertCircle, to: "/admin/request" },
 ];
 
 const extendedItems = [
-  { label: "Donor Profiles", icon: User, to: "/profile" },
-  { label: "Blood Camps", icon: CalendarDays, to: "/camps" },
-  { label: "Notifications", icon: Bell, to: "/notifications", badge: 3 },
-  { label: "Analytics", icon: BarChart3, to: "/analytics" },
+  { label: "Donor Profiles", icon: User, to: "/admin/profile" },
+  { label: "Blood Camps", icon: CalendarDays, to: "/admin/camps" },
+  { label: "Notifications", icon: Bell, to: "/admin/notifications", badge: 3 },
+  { label: "Analytics", icon: BarChart3, to: "/admin/analytics" },
 ];
 
 export function Sidebar({ onClose }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-150 relative group ${
@@ -40,7 +42,7 @@ export function Sidebar({ onClose }: SidebarProps) {
       {/* Logo */}
       <div className="flex items-center justify-between px-5 py-5 border-b border-[#E5E7EB] dark:border-gray-700/60">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/admin")}
           className="flex items-center gap-2.5 group"
         >
           <div className="w-8 h-8 bg-[#C0152A] rounded-lg flex items-center justify-center shadow-md shadow-red-900/20">
@@ -63,7 +65,7 @@ export function Sidebar({ onClose }: SidebarProps) {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
         {navItems.map((item) => (
-          <NavLink key={item.to} to={item.to} end={item.to === "/"} className={linkClass}>
+          <NavLink key={item.to} to={item.to} end={item.to === "/admin"} className={linkClass}>
             <item.icon className="w-4 h-4 flex-shrink-0" />
             <span>{item.label}</span>
           </NavLink>
@@ -85,7 +87,7 @@ export function Sidebar({ onClose }: SidebarProps) {
 
         <div className="my-3 border-t border-[#E5E7EB] dark:border-gray-700/60" />
 
-        <NavLink to="/settings" className={linkClass}>
+        <NavLink to="/admin/settings" className={linkClass}>
           <Settings className="w-4 h-4 flex-shrink-0" />
           <span>Settings</span>
         </NavLink>
@@ -108,13 +110,17 @@ export function Sidebar({ onClose }: SidebarProps) {
             className="w-8 h-8 rounded-full flex items-center justify-center text-white flex-shrink-0"
             style={{ background: "#C0152A", fontSize: "12px", fontWeight: 700 }}
           >
-            D
+            {user?.name?.slice(0, 1).toUpperCase() ?? "?"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[#111827] dark:text-white text-sm font-semibold truncate">Dinesh</p>
-            <p className="text-[#6B7280] dark:text-gray-400 text-xs truncate">Admin</p>
+            <p className="text-[#111827] dark:text-white text-sm font-semibold truncate">{user?.name ?? "User"}</p>
+            <p className="text-[#6B7280] dark:text-gray-400 text-xs truncate capitalize">{user?.role ?? "staff"}</p>
           </div>
-          <button className="text-[#6B7280] dark:text-gray-500 hover:text-[#C0152A] dark:hover:text-[#ff6b7a] transition-colors">
+          <button
+            onClick={logout}
+            title="Sign out"
+            className="text-[#6B7280] dark:text-gray-500 hover:text-[#C0152A] dark:hover:text-[#ff6b7a] transition-colors"
+          >
             <LogOut className="w-3.5 h-3.5" />
           </button>
         </div>

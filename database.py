@@ -37,8 +37,12 @@ def init_db_pool() -> None:
 
 @contextmanager
 def get_connection() -> Generator:
+    global _connection_pool
     if _connection_pool is None:
-        raise HTTPException(status_code=503, detail="Database unavailable")
+        try:
+            init_db_pool()
+        except RuntimeError:
+            raise HTTPException(status_code=503, detail="Database unavailable")
     conn = None
     try:
         conn = _connection_pool.get_connection()

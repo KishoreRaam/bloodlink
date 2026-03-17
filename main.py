@@ -4,7 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db_pool, test_connection
-from routes import donors, blood_banks, hospitals, requests, donations, matching
+from routes import donors, blood_banks, hospitals, requests, donations, matching, auth, analytics
+from routes import blood_camp
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,7 +21,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,6 +33,9 @@ app.include_router(hospitals.router,   prefix="/hospitals",    tags=["Hospitals"
 app.include_router(requests.router,    prefix="/requests",     tags=["Patient Requests"])
 app.include_router(donations.router,   prefix="/donations",    tags=["Donations"])
 app.include_router(matching.router,    tags=["Matching"])
+app.include_router(auth.router,        prefix="/auth",         tags=["Auth"])
+app.include_router(analytics.router,   prefix="/analytics",    tags=["Analytics"])
+app.include_router(blood_camp.router,  prefix="/camps",         tags=["Blood Camps"])
 
 
 @app.on_event("startup")
