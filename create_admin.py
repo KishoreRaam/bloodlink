@@ -10,7 +10,7 @@ conn = mysql.connector.connect(
     port=44519,
     user="root",
     password="CzVUBaOLekByVcZBVtjzphBPTPVcjGVG",
-    database="railway",
+    database="blood_management_system",
 )
 cursor = conn.cursor()
 
