@@ -4,7 +4,7 @@ import {
   LayoutDashboard, User, Droplets, Bell, LogOut,
   MapPin, Calendar, ChevronRight, Eye, EyeOff,
   AlertTriangle, Info, Clock, CheckCircle, Check,
-  Edit2, Save, X,
+  Edit2, Save, X, Menu,
 } from "lucide-react";
 import { getDonor, getDonorHistory, updateDonor, type Donor, type DonationHistory } from "../services/api";
 
@@ -78,6 +78,8 @@ export function DonorDashboard() {
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Donor>>({});
   const [saving, setSaving] = useState(false);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Notifications state
   const [notifTab, setNotifTab] = useState<"all" | "unread">("all");
@@ -673,7 +675,7 @@ export function DonorDashboard() {
     return (
       <div className="space-y-6">
         {/* Stat cards */}
-        <div className="grid grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-5">
           <div className="bg-white rounded-[12px] shadow-[0px_1px_3px_rgba(0,0,0,0.08)] p-6">
             <div className="w-11 h-11 bg-[rgba(215,38,56,0.07)] rounded-[14px] flex items-center justify-center mb-5">
               <Droplets className="w-5 h-5 text-[#d72638]" />
@@ -726,10 +728,10 @@ export function DonorDashboard() {
         </div>
 
         {/* Middle row */}
-        <div className="grid grid-cols-12 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
 
           {/* Left col */}
-          <div className="col-span-7 space-y-5">
+          <div className="lg:col-span-7 space-y-5">
             {/* My Profile summary */}
             <div className="bg-white rounded-[12px] shadow-[0px_1px_3px_rgba(0,0,0,0.08)] overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#f3f4f6]">
@@ -815,7 +817,7 @@ export function DonorDashboard() {
           </div>
 
           {/* Right col */}
-          <div className="col-span-5 space-y-5">
+          <div className="lg:col-span-5 space-y-5">
             {/* My Availability */}
             <div className="bg-white rounded-[12px] shadow-[0px_1px_3px_rgba(0,0,0,0.08)] p-6">
               <p className="text-[#1a1a2e] font-bold text-[16px] mb-6">My Availability</p>
@@ -974,8 +976,76 @@ export function DonorDashboard() {
   return (
     <div className="flex h-screen bg-[#f5f5f5] font-['Inter',sans-serif] overflow-hidden">
 
-      {/* ── Sidebar ─────────────────────────── */}
-      <div className="w-[240px] flex-shrink-0 bg-[#1a1a2e] border-r border-[rgba(255,255,255,0.08)] flex flex-col">
+      {/* ── Mobile Sidebar Overlay ───────────── */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+          <div className="absolute left-0 top-0 bottom-0 w-[240px] bg-[#1a1a2e] border-r border-[rgba(255,255,255,0.08)] flex flex-col z-10">
+            {/* Logo */}
+            <div className="h-[77px] flex items-center justify-between px-5 border-b border-[rgba(255,255,255,0.08)]">
+              <button onClick={() => { navigate("/"); setSidebarOpen(false); }} className="flex items-center gap-2.5">
+                <div className="w-9 h-9 bg-[#d72638] rounded-[14px] shadow-[0px_4px_14px_rgba(215,38,56,0.38)] flex items-center justify-center">
+                  <svg viewBox="0 0 20 20" className="w-5 h-5 fill-white">
+                    <path d="M10 2C7.2 2 5 6.2 5 9c0 4.4 5 10 5 10s5-5.6 5-10c0-2.8-2.2-7-5-7zm0 7a2 2 0 110-4 2 2 0 010 4z"/>
+                  </svg>
+                </div>
+                <span className="text-white font-extrabold text-[18px] tracking-[-0.5px]">BloodLink</span>
+              </button>
+              <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg text-white/50 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {/* Donor profile */}
+            <div className="px-5 py-5 border-b border-[rgba(255,255,255,0.08)] flex flex-col items-center gap-3">
+              <div className="w-16 h-16 rounded-full bg-[#d72638] flex items-center justify-center shadow-[0px_4px_20px_rgba(215,38,56,0.38)]">
+                <span className="text-white font-extrabold text-[20px]">{initials}</span>
+              </div>
+              <span className="text-white font-semibold text-[16px]">{donor?.name ?? "—"}</span>
+              <span className="bg-[#d72638] text-white font-bold text-[14px] font-mono px-3 py-0.5 rounded-full">{bloodGroup}</span>
+            </div>
+            {/* Nav */}
+            <nav className="flex-1 px-3 pt-4 space-y-0.5">
+              {navItems.map(item => {
+                const isActive = activeNav === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => { setActiveNav(item.key); setSidebarOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-[14px] text-[14px] transition-all relative"
+                    style={{
+                      background: isActive ? "rgba(255,255,255,0.12)" : "transparent",
+                      color: isActive ? "#fff" : "rgba(255,255,255,0.55)",
+                      fontWeight: isActive ? 600 : 400,
+                    }}
+                  >
+                    {isActive && <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-[#d72638] rounded-r-full" />}
+                    <item.icon className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {item.badge && (
+                      <span className="w-4 h-4 bg-[#d72638] rounded-full text-white text-[10px] font-bold flex items-center justify-center">
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+            {/* Logout */}
+            <div className="px-3 pb-4 pt-3 border-t border-[rgba(255,255,255,0.08)]">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-[14px] text-[#d72638] text-[14px] font-semibold hover:bg-[rgba(215,38,56,0.1)] transition-all"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sidebar (desktop) ───────────────── */}
+      <div className="hidden lg:flex w-[240px] flex-shrink-0 bg-[#1a1a2e] border-r border-[rgba(255,255,255,0.08)] flex-col">
 
         {/* Logo */}
         <div className="h-[77px] flex items-center px-5 border-b border-[rgba(255,255,255,0.08)]">
@@ -1049,8 +1119,33 @@ export function DonorDashboard() {
       {/* ── Main ─────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-        {/* Topbar */}
-        <div className="h-16 bg-white border-b border-[#e5e7eb] shadow-[0px_1px_3px_rgba(0,0,0,0.06)] flex items-center justify-between px-6 flex-shrink-0">
+        {/* Mobile header */}
+        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-[#1a1a2e] border-b border-[rgba(255,255,255,0.08)] flex-shrink-0">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-white/70 hover:text-white">
+            <Menu className="w-5 h-5" />
+          </button>
+          <button onClick={() => navigate("/")} className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-[#d72638] rounded-[10px] flex items-center justify-center">
+              <svg viewBox="0 0 20 20" className="w-4 h-4 fill-white">
+                <path d="M10 2C7.2 2 5 6.2 5 9c0 4.4 5 10 5 10s5-5.6 5-10c0-2.8-2.2-7-5-7zm0 7a2 2 0 110-4 2 2 0 010 4z"/>
+              </svg>
+            </div>
+            <span className="text-white font-extrabold text-[16px]">BloodLink</span>
+          </button>
+          <button
+            onClick={toggleAvailability}
+            disabled={togglingAvail}
+            className={`relative w-11 h-6 rounded-full transition-all ${available ? "bg-[#16a34a]" : "bg-[#4b5563]"}`}
+          >
+            <span
+              className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all"
+              style={{ left: available ? "calc(100% - 22px)" : "2px" }}
+            />
+          </button>
+        </div>
+
+        {/* Desktop topbar */}
+        <div className="hidden lg:flex h-16 bg-white border-b border-[#e5e7eb] shadow-[0px_1px_3px_rgba(0,0,0,0.06)] items-center justify-between px-6 flex-shrink-0">
           <span className="text-[#111827] font-bold text-[20px]">{PAGE_TITLE[activeNav]}</span>
           <div className="flex items-center gap-4">
             <div className="text-right">
@@ -1072,8 +1167,13 @@ export function DonorDashboard() {
           </div>
         </div>
 
+        {/* Mobile page title */}
+        <div className="lg:hidden px-4 pt-4 pb-1 flex-shrink-0">
+          <span className="text-[#111827] font-bold text-[18px]">{PAGE_TITLE[activeNav]}</span>
+        </div>
+
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-8 py-8">
+        <div className="flex-1 overflow-y-auto px-4 py-4 lg:px-8 lg:py-8">
           {activeNav === "dashboard"     && renderDashboard()}
           {activeNav === "profile"       && renderProfile()}
           {activeNav === "donations"     && renderDonations()}
