@@ -111,14 +111,14 @@ export function DonorRegister() {
         <div className="relative z-10 flex flex-col items-center text-center px-12 gap-8">
 
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <button onClick={() => navigate("/")} className="flex items-center gap-3">
             <div className="w-12 h-12 bg-[#d72638] rounded-2xl shadow-[0px_8px_24px_rgba(215,38,56,0.38)] flex items-center justify-center">
               <svg viewBox="0 0 28 28" className="w-7 h-7 text-white fill-current">
                 <path d="M14 2C9.8 2 7 8.2 7 12c0 6.2 7 14 7 14s7-7.8 7-14c0-3.8-2.8-10-7-10zm0 11a3 3 0 110-6 3 3 0 010 6z"/>
               </svg>
             </div>
             <span className="text-white font-extrabold text-[26px]">BloodLink</span>
-          </div>
+          </button>
 
           {/* Blood-group tile grid */}
           <div className="grid grid-cols-4 gap-3">

@@ -1,4 +1,4 @@
-import { Outlet, Navigate } from "react-router";
+import { Outlet, Navigate, useNavigate } from "react-router";
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Menu, LogOut } from "lucide-react";
@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
@@ -42,12 +43,12 @@ export function Layout() {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/")} className="flex items-center gap-2">
             <div className="w-7 h-7 bg-[#C0152A] rounded-lg flex items-center justify-center">
               <span className="text-white text-xs font-bold">BL</span>
             </div>
             <span className="text-[#111827] dark:text-white font-bold text-base">BloodLink</span>
-          </div>
+          </button>
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-full bg-[#C0152A] flex items-center justify-center">
               <span className="text-white text-xs font-bold">{initials}</span>

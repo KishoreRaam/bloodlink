@@ -979,14 +979,14 @@ export function DonorDashboard() {
 
         {/* Logo */}
         <div className="h-[77px] flex items-center px-5 border-b border-[rgba(255,255,255,0.08)]">
-          <div className="flex items-center gap-2.5">
+          <button onClick={() => navigate("/")} className="flex items-center gap-2.5">
             <div className="w-9 h-9 bg-[#d72638] rounded-[14px] shadow-[0px_4px_14px_rgba(215,38,56,0.38)] flex items-center justify-center">
               <svg viewBox="0 0 20 20" className="w-5 h-5 fill-white">
                 <path d="M10 2C7.2 2 5 6.2 5 9c0 4.4 5 10 5 10s5-5.6 5-10c0-2.8-2.2-7-5-7zm0 7a2 2 0 110-4 2 2 0 010 4z"/>
               </svg>
             </div>
             <span className="text-white font-extrabold text-[18px] tracking-[-0.5px]">BloodLink</span>
-          </div>
+          </button>
         </div>
 
         {/* Donor profile */}

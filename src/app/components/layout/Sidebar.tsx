@@ -42,7 +42,7 @@ export function Sidebar({ onClose }: SidebarProps) {
       {/* Logo */}
       <div className="flex items-center justify-between px-5 py-5 border-b border-[#E5E7EB] dark:border-gray-700/60">
         <button
-          onClick={() => navigate("/admin")}
+          onClick={() => navigate("/")}
           className="flex items-center gap-2.5 group"
         >
           <div className="w-8 h-8 bg-[#C0152A] rounded-lg flex items-center justify-center shadow-md shadow-red-900/20">

@@ -1,10 +1,11 @@
 import { useState, FormEvent } from "react";
-import { Navigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { loginUser } from "../services/api";
 
 export function Login() {
   const { login, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,14 +33,14 @@ export function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-white">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
         {/* Logo / Brand */}
-        <div className="flex items-center justify-center gap-3 mb-8">
+        <button onClick={() => navigate("/")} className="flex items-center justify-center gap-3 mb-8">
           <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center">
             <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2C8.686 2 6 6.686 6 10c0 5.25 6 12 6 12s6-6.75 6-12c0-3.314-2.686-6-6-6zm0 8a2 2 0 110-4 2 2 0 010 4z" />
             </svg>
           </div>
           <span className="text-2xl font-bold text-gray-900">BloodLink</span>
-        </div>
+        </button>
 
         <h1 className="text-xl font-semibold text-gray-800 mb-1 text-center">Sign in to your account</h1>
         <p className="text-sm text-gray-500 mb-6 text-center">Emergency Blood Management System</p>

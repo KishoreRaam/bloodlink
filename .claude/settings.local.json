@@ -7,7 +7,8 @@
       "Bash(pip install:*)",
       "mcp__claude_ai_Figma__get_design_context",
       "mcp__claude_ai_Figma__get_screenshot",
-      "Bash(mysql:*)"
+      "Bash(mysql:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }
