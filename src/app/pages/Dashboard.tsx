@@ -4,6 +4,8 @@ import { Users, CheckCircle, Clock, Droplets, TrendingUp, TrendingDown, ArrowRig
 import { BloodGroupBadge } from "../components/ui/BloodGroupBadge";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { getDonors, getRequests, type Donor, type PatientRequest } from "../services/api";
+import { EmergencyAlertPanel } from "./EmergencyAlertPanel";
+import { PriorityQueue } from "./PriorityQueue";
 
 const BLOOD_GROUPS = ["O+", "A+", "B+", "AB+", "O-", "A-", "B-", "AB-"];
 const BLOOD_COLORS: Record<string, string> = {
@@ -118,6 +120,9 @@ export function Dashboard() {
         </button>
       </div>
 
+      {/* Emergency Alert Panel */}
+      <EmergencyAlertPanel />
+
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card) => (
@@ -156,6 +161,9 @@ export function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* Priority Waiting Queue */}
+      <PriorityQueue />
 
       {/* Middle Row */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">

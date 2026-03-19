@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import { getDonors, getRequests } from "../services/api";
 import { motion } from "motion/react";
+import { getEmergencyQueue, type EmergencyItem } from "./EmergencyAlertPanel";
 
 interface LiveStats {
   topGroups: { group: string; count: number }[];
@@ -12,6 +13,7 @@ interface LiveStats {
 export function LandingPage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<LiveStats | null>(null);
+  const [emergencies, setEmergencies] = useState<EmergencyItem[]>([]);
   const footerRef = useRef<HTMLElement>(null);
   const [footerInView, setFooterInView] = useState(false);
 
@@ -50,6 +52,18 @@ export function LandingPage() {
 
       setStats({ topGroups, pending, matchRate });
     }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const load = () => {
+      const q = getEmergencyQueue().filter(
+        (i) => i.status === "Pending" || i.status === "In Progress"
+      );
+      setEmergencies(q);
+    };
+    load();
+    window.addEventListener("emergencyQueueUpdated", load);
+    return () => window.removeEventListener("emergencyQueueUpdated", load);
   }, []);
 
   const scrollTo = (id: string) => {
@@ -227,6 +241,75 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Emergency Ticker ── */}
+      {emergencies.length > 0 && (
+        <section className="bg-[#FEF2F2] dark:bg-[#1a0a0a] border-y border-[#FECACA] dark:border-[#7f1d1d]/50 py-3 px-6 overflow-hidden">
+          <div className="max-w-[1160px] mx-auto flex items-center gap-4">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <motion.span
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+                className="text-lg"
+              >
+                🚨
+              </motion.span>
+              <span
+                className="text-[#DC2626] font-bold uppercase"
+                style={{ fontSize: "11px", letterSpacing: "0.08em" }}
+              >
+                Live Emergencies
+              </span>
+            </div>
+            <div className="h-4 w-px bg-[#FECACA] dark:bg-[#7f1d1d] flex-shrink-0" />
+            <div className="overflow-hidden flex-1">
+              <motion.div
+                animate={{ x: ["0%", "-50%"] }}
+                transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+                className="flex items-center gap-8 whitespace-nowrap"
+              >
+                {[...emergencies, ...emergencies].map((item, i) => (
+                  <span
+                    key={`${item.id}-${i}`}
+                    className="inline-flex items-center gap-2 text-[#991B1B] dark:text-[#fca5a5]"
+                    style={{ fontSize: "13px" }}
+                  >
+                    <span
+                      className="inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-white font-bold"
+                      style={{
+                        background:
+                          item.urgency === "Critical"
+                            ? "#DC2626"
+                            : item.urgency === "Urgent"
+                            ? "#EA580C"
+                            : "#6B7280",
+                        fontSize: "10px",
+                      }}
+                    >
+                      {item.urgency}
+                    </span>
+                    <span className="font-semibold">{item.patient_name}</span>
+                    <span className="text-[#DC2626]/60 dark:text-[#fca5a5]/60">
+                      needs {item.blood_group} · {item.units}u ·{" "}
+                      {item.hospital_name.length > 20
+                        ? item.hospital_name.slice(0, 20) + "…"
+                        : item.hospital_name}
+                    </span>
+                    <span className="text-[#FECACA] dark:text-[#7f1d1d]">|</span>
+                  </span>
+                ))}
+              </motion.div>
+            </div>
+            <button
+              onClick={() => navigate("/login")}
+              className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-[#DC2626] text-white font-semibold hover:bg-[#B91C1C] transition-colors"
+              style={{ fontSize: "11px" }}
+            >
+              Respond →
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* ── How It Works ── */}
       <section id="how-it-works" className="bg-white dark:bg-slate-900 py-24 px-6 lg:px-8 transition-colors duration-300">
