@@ -265,7 +265,7 @@ export function LandingPage() {
             <div className="overflow-hidden flex-1">
               <motion.div
                 animate={{ x: ["0%", "-50%"] }}
-                transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+                transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
                 className="flex items-center gap-8 whitespace-nowrap"
               >
                 {[...emergencies, ...emergencies].map((item, i) => (
