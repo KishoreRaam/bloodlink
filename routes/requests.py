@@ -114,6 +114,42 @@ def get_request(request_id: int):
         raise HTTPException(status_code=503, detail="Database error")
 
 
+@router.post("/{request_id}/fulfill")
+def fulfill_request(request_id: int, body: FulfillRequest):
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM patient_request WHERE request_id = %s", (request_id,))
+            req = cursor.fetchone()
+            if not req:
+                raise HTTPException(status_code=404, detail="Request not found")
+            if req["status"] != "Pending":
+                raise HTTPException(status_code=409, detail=f"Request is already {req['status']}")
+
+            cursor.execute("SELECT available_units FROM blood_bank WHERE bloodbank_id = %s", (body.bank_id,))
+            bank = cursor.fetchone()
+            if not bank:
+                raise HTTPException(status_code=404, detail="Blood bank not found")
+            if bank["available_units"] < req["quantity_needed"]:
+                raise HTTPException(status_code=409, detail="Insufficient blood units in bank")
+
+            cursor.execute(
+                "UPDATE blood_bank SET available_units = available_units - %s WHERE bloodbank_id = %s",
+                (req["quantity_needed"], body.bank_id),
+            )
+            cursor.execute(
+                "UPDATE patient_request SET status = 'Fulfilled' WHERE request_id = %s",
+                (request_id,),
+            )
+            cursor.close()
+        return {"message": "Request fulfilled successfully", "request_id": request_id}
+    except HTTPException:
+        raise
+    except MySQLError as exc:
+        logger.error("DB error fulfilling request %s: %s", request_id, exc)
+        raise HTTPException(status_code=503, detail="Database error")
+
+
 @router.put("/{request_id}/cancel", response_model=PatientRequestResponse)
 def cancel_request(request_id: int):
     sql = """

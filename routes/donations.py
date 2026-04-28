@@ -32,6 +32,11 @@ def create_donation(donation: DonationCreate):
                 donation.donation_date, donation.quantity_donated, donation.notes,
             ))
             donation_id = cursor.lastrowid
+            # Replaces the DB trigger: update donor status after donation
+            cursor.execute(
+                "UPDATE donor SET availability_status = 'Not Available', last_donated = %s WHERE donor_id = %s",
+                (donation.donation_date, donation.donor_id),
+            )
             cursor.execute(fetch_sql, (donation_id,))
             row = cursor.fetchone()
             cursor.close()
