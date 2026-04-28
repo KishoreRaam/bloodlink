@@ -1,7 +1,8 @@
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from database import init_db_pool, test_connection
 from routes import donors, blood_banks, hospitals, requests, donations, matching, auth, analytics
@@ -31,6 +32,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    from fastapi import HTTPException
+    status_code = exc.status_code if isinstance(exc, HTTPException) else 500
+    detail = exc.detail if isinstance(exc, HTTPException) else "Internal server error"
+    origin = request.headers.get("origin", "")
+    allowed = [
+        "https://bloodlink-beryl.vercel.app",
+        "https://bloodlink-9x0s5424s-kishoreraammmct2024-8350s-projects.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ]
+    headers = {}
+    if origin in allowed:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+    return JSONResponse(status_code=status_code, content={"detail": detail}, headers=headers)
+
 
 app.include_router(donors.router,      prefix="/donors",       tags=["Donors"])
 app.include_router(blood_banks.router, prefix="/blood-banks",  tags=["Blood Banks"])
