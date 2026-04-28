@@ -1,17 +1,20 @@
 import logging
+import os
 import bcrypt
 from datetime import datetime, timedelta
 from typing import Optional
 
+from dotenv import load_dotenv
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from database import get_connection
 
+load_dotenv()
 logger = logging.getLogger(__name__)
 
-SECRET_KEY = "bloodlink-secret-key-change-in-production-2026"
+SECRET_KEY = os.getenv("SECRET_KEY", "bloodlink-secret-key-change-in-production-2026")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 
